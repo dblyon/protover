@@ -1,7 +1,28 @@
 from __future__ import print_function
-import cameltoolkit, camelherder, py2r, os, peptide_results, filterresults, sys
+import camelherder, py2r, os, peptide_results, filterresults, sys
 from locale import localeconv
 from time import clock
+
+################################################################################
+################################################################################
+################################################################################
+dbl = False
+check_input = True
+extract_spectra = True
+escapee = True
+cleanTP0 = False
+calcRIA = True
+# Filter 1
+#####RIAincreasing = False # --> keep
+# # # # # Filter 2 and 3
+# # # # replicatereproducibility = False # --> drop since in reprep
+# # # # # Filter 4
+# # # # filterrepriaprotein = False # --> drop since in reprep
+# PLOT
+plotting = True 
+################################################################################
+################################################################################
+################################################################################
 
 class Run(object):
 
@@ -48,18 +69,6 @@ if __name__ == "__main__":
     else:
         run.set_platform("unix")
 
-################################################################################
-################################################################################
-################################################################################
-    dbl = False
-    check_input = True
-    escapee = True
-    cleanTP0 = True
-    RIAincreasing = True
-################################################################################
-################################################################################
-################################################################################
-    
     def _check_userinput_absorrelpath(fn):
         """
         FileName -> absolute path FileName
@@ -98,7 +107,7 @@ if __name__ == "__main__":
             sys.exit(0)
         return number
 
-    def _check_userinput_file(fn, setting_name, check_input):
+    def _check_userinput_file(fn, setting_name, check_input): #!!! speedups: os.path.isfile(fn)
         if not check_input:
             return fn
         try:
@@ -124,7 +133,7 @@ if __name__ == "__main__":
             print("could neither be opened nor created. (Compare your file to the provided template, it should be tab-delimited.)")
             sys.exit(0)
 
-    def experimentfile2runturnover(fn, sep="\t"):
+    def experimentfile2runturnover(fn, sep="\t"): #!!! filenames with spaces will lead to errors
         """
         #exp_dict: key = Experiment, val = {key = TimePoint, val = Filename}                
         #exp_dict[Experiment] = {key = TimePoint, val = fn }
@@ -146,6 +155,7 @@ if __name__ == "__main__":
             else:
                 line = line.split("#")[0].strip()
                 if len(line.split(" ")) > 1:
+                    print(line)
                     print("Please use tabs not spaces as delimiters in the 'experiment_file.txt'")
                     sys.exit(0)
                 linesplit = line.split(sep)
@@ -226,11 +236,17 @@ if __name__ == "__main__":
                     else:
                         ancres_dict[experiment][replicate] = {}
                         ancres_dict[experiment][replicate][0] = ancres_fn_long
-        return(settings_dict, exp_dict, ancres_dict)
+        return(settings_dict, exp_dict, ancres_dict)        
+        
     fn = os.getcwd()
     fn = fn + "/experiment_file.txt" 
     settings_dict, exp_dict, ancres_dict = experimentfile2runturnover(_check_userinput_experimentfile(fn))
+    print(settings_dict)
+    print(exp_dict)
+    print(ancres_dict)
     
+    ad = ancres_dict
+   
     if len(settings_dict.keys()) != 5:        
         num_missing_settings = 5 - len(settings_dict.keys())
         str2print = ("%s"+"%s"+"%s") % ("There are ", num_missing_settings, " missing or badly set settings in the 'experiment_file.txt', please compare your file to the provided template. The file should be tab-delimited.")
@@ -261,8 +277,9 @@ if __name__ == "__main__":
         dir_list.append(ria)
         for directory in dir_list:
                 if not os.path.exists(directory):
-                    os.makedirs(directory)        
-        run.run_proteinturnover(exp_dict[experiment_replicate], plottitle, selpexfilepath, rt, mass_accuracy_first, mass_accuracy_rest, outputdir, dbl=dbl, escapee=escapee)
+                    os.makedirs(directory)
+        if extract_spectra:
+            run.run_proteinturnover(exp_dict[experiment_replicate], plottitle, selpexfilepath, rt, mass_accuracy_first, mass_accuracy_rest, outputdir, dbl=dbl, escapee=escapee)
     
     ################## Post processing
     outputdir = settings_dict["outputdir"].replace("\\", "/")
@@ -270,45 +287,73 @@ if __name__ == "__main__":
     fr.create_rplotbatchtxt()
     plot = py2r.Talkr()
     
-    ################## clean TP0
+    ##################
     if cleanTP0:
-        fr.cleanTP0()
+        fr.cleanTP0_v2()
+
+    if calcRIA:
     ################## calc RIA
-    fr.calcRIA_relint()
+        fr.calcRIA_relint_v2()
     
-    print("\n", "Plotting 2Dstacks", "\n")
     ################## 2Dstacks PLOT
-    fr.plot_2Dstacks(plot)
+    if plotting:
+        print("\n", "Plotting 2Dstacks", "\n")
+        fr.plot_2Dstacks(plot)
         
     ################# PLOT TP vs RIA (before Filter 3 = post-processing-filter)
-    if dbl:
-        fr.replot_tpvsria(plot, dbl=False)
+    if plotting:
+        if dbl:
+            fr.replot_tpvsria(plot, dbl=False)
 
+############################################################################################################
+##########################################s##################################################################
     ################## FILTERS
     ################## Filter #3 --> Peptide Level # use first since fast and easy
-    if RIAincreasing:
-        fr.ancres_filterriaincreasing()
+    # if RIAincreasing:
+        # threshold=0.25 # if NONE --> RIA has to increase
+        # fr.ancres_filterriaincreasing(threshold=threshold)
+    
+    # # # # # ################### Filter 1 and 2
+    # # # # # if replicatereproducibility:
+        # # # # # ##### thresh_f1 = reproducibility of RIA for peptide level (tech./biol. replicates), threshold in StandardDeviations
+        # # # # # ##### thresh_f2 = reproducibility of coverage_theomips for peptide level (tech./biol. replicates), threshold in %
+        # # # # # thresh_f1=2
+        # # # # # thresh_f2=0.25
+        # # # # # fr.ancres_replicatereproducibility(thresh_f1=thresh_f1, thresh_f2=thresh_f2)
+    
+    # # # # # ################### Last Filter due to computation time/resources LONG RUNTIME!!!
+    # # # # # if filterrepriaprotein:
+        # # # # # fr.ancres_filterrepriaprotein()
+    
+    
+############################################################################################################
+############################################################################################################    
         
     ################# PLOT TP vs RIA (after Filter 3)
-    print("\n", "Plotting RIAs", "\n")
-    fr.replot_tpvsria(plot, dbl=dbl)
+    if plotting:
+        print("\n", "Plotting RIAs", "\n")
+        fr.replot_tpvsria(plot, dbl=dbl)
     
     ################# PLOT Histos
-    if dbl:
-        bins = (0, 1.05, 0.05)
-        bins = fr._make_bins(bins)
-        fr.replot_histos(plot, bins, plotfrequency=True, plotdensity=True, dbl=dbl)
+    if plotting:
+        if dbl:
+            bins = (0, 1.05, 0.05)
+            bins = fr._make_bins(bins)
+            fr.replot_histos(plot, bins, plotfrequency=True, plotdensity=True, dbl=dbl)
     
     ################## BATCH R PLOTS
-    r_plot_batch = fr.run_rplotbatch(plot, run.get_platform())
+    if plotting:
+        r_plot_batch = fr.run_rplotbatch(plot, run.get_platform())
     
     ################# move 2Dstacks to positive and negative folder
-    fr.move_2dstacks()
+    if plotting:
+        fr.move_2dstacks()
     
     ################## Cleanup files
-    if r_plot_batch:
-        if not dbl:
-            fr.cleanup_files(run.get_decimalpoint())
+    if plotting:
+        if r_plot_batch:
+            if not dbl:
+                fr.cleanup_files(run.get_decimalpoint())
     
     stop = clock()
     print("runtime[min]: ", (stop - start)/60.0 )

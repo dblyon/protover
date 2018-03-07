@@ -1,5 +1,5 @@
 from __future__ import print_function
-import os, shutil, cameltoolkit, mfbt, itertools
+import os, shutil, cameltoolkit, mfbt, itertools #, multiprocessing, peptide_results, py2r, re, 
 import pandas as pd
 import numpy as np
 from scipy import stats
@@ -61,6 +61,8 @@ class Filter(object):
         produce Tuple with two Lists (good/pass and bad/no pass) of AAseqs,
         check if number of sticks deviates +/-10% between replicates
         """
+        #aaseq_good = []
+        #aaseq_bad  = []
         dict_aaseq2coverage = {}
         df = df_list[0]
         for aaseq in aaseq_list:
@@ -140,7 +142,8 @@ class Filter(object):
                 ancres_list.append(self.get_ancresfnmostfilteredbyexprep(experiment, replicate))
             df_list = self.ancreslist2dflist(ancres_list) # Each anchor results file made into DataFrame
             for index, replicate in enumerate(ancres_dict[experiment]):
-                df_aaseq_good = self.get_dfbyaaseqlist(df_list[index], aaseq_good)            
+                df_aaseq_good = self.get_dfbyaaseqlist(df_list[index], aaseq_good)
+                #df_aaseq_bad = self.get_dfbyaaseqlist(df_list[index], aaseq_bad)
                 fn = ancres_list[index]
                 fn = fn.replace(".txt", "_RepRep.txt")
                 fn_basename = os.path.basename(fn)
@@ -197,7 +200,11 @@ class Filter(object):
         only calculate if at least 3 peptides per protein
         """
         dict_aaseq2tpria = {} # key = aaseq, val = { key = TP/RIA, val = list} # if multiple DFs append TP/RIA vals to list
+        #pair_list_pos = []
+        #pair_list_neg = []
         aaseq_list = self.get_aaseqsbydflist(df_list, an)
+        # if len(aaseq_list) < 3: # only calculate if at least 3 peptides per protein #!!!
+            # return((aaseq_list, []))
         for aaseq in aaseq_list:
             for df in df_list:
                 x_vals_temp, y_vals_temp = self.get_tpriasofdflist(df_list, aaseq, withoutTP0=True)
@@ -495,18 +502,17 @@ class Filter(object):
         
     def write_df2file(self, df, filename, sep="\t", decimalpoint=".", index=False, header=True):
         df["Rt_spec"] = df["Rt_spec"].apply(lambda x: round(x, 3))
-        df = df.sort(["AAseq", "TimePoint"], ascending=[True, True])
-        #col_list_sorted = ["AAseq", "charge", "Rt_SelPeX", "ANs", "TimePoint", "Filename", "Rt_spec", "RIA", "#N"]
+        df = df.sort_values(["AAseq", "TimePoint"], ascending=[True, True])
         col_list_sorted = ["AAseq", "charge", "Rt_input", "ANs", "TimePoint", "Filename", "Rt_spec", "RIA", "#N", "sum14N", "sum15N"]        
         mz_x15N_list, int_x15N_list = self._sort_x15Ncolnames_natkeys(df)
         col_list_sorted += mz_x15N_list + int_x15N_list
-        df = df.reindex_axis(col_list_sorted, axis=1)
+        df = df.reindex(col_list_sorted, axis=1)
         if decimalpoint == ".":
             df.to_csv(filename, sep="\t", header=header, index=index)
         else:
             df = df.applymap(lambda x: str(x).replace(".", ","))
             df = df.applymap(lambda x: str(x).replace(",mzML", ".mzML"))
-            df.to_csv(filename, sep="\t", header=header, index=index)
+            df.to_csv(filename, sep=sep, header=header, index=index)
 
     def get_anslistfromdf(self, df):
         """
@@ -771,7 +777,7 @@ class Filter(object):
         aaseq_bad = [x for x in aaseq_orig if x not in aaseq_filt]
         return(aaseq_filt, aaseq_bad)
         
-    def replot_tpvsria(self, plot, label="positive", verbose=False):
+    def replot_tpvsria(self, plot, label="positive", dbl=False):
         """
         for every replicate of every experiment plot TP vs RIA
         #ancres_dict: key = Experiment, val = {key = Replicate, val = Ancres_fn}
@@ -784,7 +790,7 @@ class Filter(object):
                 df = pd.read_csv(ancres_fn, sep="\t")
                 an_list = self.get_anslistfromdf(df)
                 plot.set_r_plottemptxt(self.get_rplottemptxt(experiment, replicate))
-                if verbose:
+                if dbl:
                     plotfilelocation = self.get_outputdir() + experiment + "_" + replicate+"/" + "RIA" + "/" + label
                 else:
                     plotfilelocation = self.get_outputdir() + experiment + "_" + replicate + "/" + "RIA"
@@ -820,7 +826,7 @@ class Filter(object):
                     pass
                 else:
                     print("An error occurred when attempting to plot using R.")
-                    print("Comment out 'fr.cleanup_files()' in 'run_experimentfile.py' to save the R-batch-plot-file (which would otherwise be deleted after execution). Or set 'verbose=True' which will prevent the 'temp' folder to be deleted.")
+                    print("Comment out 'fr.cleanup_files()' in 'run_experimentfile.py' to save the R-batch-plot-file (which would otherwise be deleted after execution). Or set 'dbl=True' which will prevent the 'temp' folder to be deleted.")
         return x                        
 
     def _make_bins(self, bins):
@@ -836,7 +842,7 @@ class Filter(object):
             bins = [x/1000.0 for x in bins]
         return bins
         
-    def replot_histos(self, plot, bins, label="positive", plotfrequency=None, plotdensity=None, verbose=False):
+    def replot_histos(self, plot, bins, label="positive", plotfrequency=None, plotdensity=None, dbl=False):
         """
         """
         ancres_dict = self.get_ancres_dict()
@@ -845,7 +851,7 @@ class Filter(object):
                 ancres_fn = self.get_ancresfnmostfilteredbyexprep(experiment, replicate)
                 df = pd.read_csv(ancres_fn, sep="\t")                
                 plot.set_r_plottemptxt(self.get_rplottemptxt(experiment, replicate))
-                if verbose:
+                if dbl:
                     plotfilelocation = self.get_outputdir()+experiment + "_" + replicate+"/"+"Histos"+"/"+label
                 else:
                     plotfilelocation = self.get_outputdir()+experiment + "_" + replicate+"/"+"Histos"+"/"
@@ -923,7 +929,7 @@ class Filter(object):
                 df = df_list[0]
                 df["sum14N"] = -1.0
                 df["sum15N"] = -1.0
-                aaseq_list = self.get_aaseqlistnoduplicates([df])
+                aaseq_list = self.get_aaseqlistnoduplicates([df])            
                 for aaseq in aaseq_list:
                     df_temp = df[df["AAseq"] == aaseq]
                     tp_min = sorted(list(df_temp["TimePoint"]))[0]
@@ -936,7 +942,35 @@ class Filter(object):
                 fn_cleanTP0_basename = "temp/" + os.path.basename(fn_cleanTP0)
                 self.add_ancresfn2dict(experiment, replicate, fn_cleanTP0_basename)
                 self.write_df2file(df, fn_cleanTP0)                                       
-    
+
+    def cleanTP0_v2(self): #!!! slow function, profile this function and find faster variant
+        """
+        addendum: 
+        add 2 new columns to DataFrame: sum14N and sum15N
+        """
+        ancres_dict = self.get_ancres_dict()
+        for experiment in ancres_dict:
+            for replicate in ancres_dict[experiment]:
+                ancres_list = []
+                ancres_list.append(self.get_ancresfnorigbyexprep(experiment, replicate))
+                df_list = self.ancreslist2dflist(ancres_list)
+                df = df_list[0]
+                df["sum14N"] = -1.0 #!!! helper function        addendum: add 2 new columns to DataFrame: sum14N and sum15N
+                df["sum15N"] = -1.0                                
+                aaseq_list = self.get_aaseqlistnoduplicates([df])
+                tp_min = sorted(list(df["TimePoint"]))[0]                
+                for aaseq in aaseq_list:                    
+                    dft = df[df["AAseq"] == aaseq]
+                    index_aaseq_tpmin = dft[dft['TimePoint'] == tp_min].index.values                    
+                    cols_list = self._cleanexpmipsTP0_v2(df, index_aaseq_tpmin)                    
+                    for col in cols_list:
+                        df.loc[index_aaseq_tpmin, col] = np.NaN
+                fn = ancres_list[0]
+                fn_cleanTP0 = fn.replace(".txt", "_cleanTP0.txt")
+                fn_cleanTP0_basename = "temp/" + os.path.basename(fn_cleanTP0)
+                self.add_ancresfn2dict(experiment, replicate, fn_cleanTP0_basename)
+                self.write_df2file(df, fn_cleanTP0)       
+            
     def _get_mzintpairs_alltps_norm2max(self, aaseq, df):
         """
         AAseq, DataFrame -> nestedList
@@ -989,7 +1023,7 @@ class Filter(object):
                 int_colname = "int_" + x15N + "x15N"
                 intensity = df[int_colname].values[0]
                 expmips.append([mz, intensity, int(x15N)])
-        return expmips
+        return sorted(expmips, key=lambda ele: int(ele[-1]))
                 
     def _cleanexpmipsTP0(self, df):
         """
@@ -998,7 +1032,6 @@ class Filter(object):
         remove all expmips following that position.
         """        
         expmips = self._get_expmips(df)
-        expmips = sorted(expmips, key=lambda ele: int(ele[-1]))
         expmips_cleanTP0 = self._findgap(expmips)
         colnames = list(df.columns)
         for ele in colnames: # set all mz and inte values to NaN
@@ -1011,6 +1044,38 @@ class Filter(object):
             df.loc[:, mz_x15N] = mz
             df.loc[:, int_x15N] = inte
         return df
+
+    def _cleanexpmipsTP0_v2(self, df, index_aaseq_tpmin):
+        """
+        DataFrame -> ListOfColNames
+        for TP0 (minimum labeling) look for first empty x15N position,
+        return the column_names as List of all expmips following that position,
+        which should be deleted.
+        """
+        cols_list = []
+        df_row = df.iloc[index_aaseq_tpmin]                
+        expmips = self._get_expmips(df_row)      
+        x15N_list = self._findgap_v2(expmips)
+        for x15N in x15N_list:
+            mz_x15N  = "mz_"  + str(x15N) + "x15N"
+            int_x15N = "int_" + str(x15N) + "x15N"
+            cols_list.append(mz_x15N)
+            cols_list.append(int_x15N)
+        return cols_list
+
+    def _findgap_v2(self, expmips):
+        '''
+        List (of expmips: [mz, int, x15N]) --> List(of x15N positions to delete)
+        '''
+        x15N_list = []
+        for index, mips in enumerate(expmips):
+            x15N = mips[-1]
+            if x15N != index:                
+                x15N_all = [ele[-1] for ele in expmips]
+                return sorted(list(set(x15N_all) - set(x15N_list)))
+            else:
+                x15N_list.append(x15N)
+        return []
 
     def _findgap(self, expmips):
         """
@@ -1234,6 +1299,6 @@ class Filter(object):
                     sum_x15N += heavy
                 else:
                     sum_x14N += intensity #!!!
-            else:                                            
+            else:                                            # else non rel. RIA
                 sum_x15N += mzintx15N[1]
         return(sum_x14N, sum_x15N)

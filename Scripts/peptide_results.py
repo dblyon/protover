@@ -1,14 +1,14 @@
 from __future__ import print_function
-import cameltoolkit, mfbt, py2r #camelherder
-#from time import clock
+import cameltoolkit, mfbt, py2r
 
-class input_results(object):
+
+class Selpex_results(object):
     def __init__(self):
         """
         expects nothing.
         creates a dictionary: key = aaseq, vals = peptide result
         """
-        self.input_results = {}   
+        self.selpex_results = {}   
     
     def set_r_plottemptxt(self, outputdir):
         fn = ("%s"+"%s"+"%s") % (outputdir, "PlotTXTForR", ".txt")
@@ -56,8 +56,8 @@ class input_results(object):
             plotfilelocation_expmipsvstps = ("%s"+"%s") % (home, """/Downloads/plots/expmipsvstps/""")
         else:
            plotfilelocation_expmipsvstps = plotfilelocation_expmipsvstps
-        for aaseq in self.input_results:
-            pep = self.input_results[aaseq].pep
+        for aaseq in self.selpex_results:
+            pep = self.selpex_results[aaseq].pep
             if expmips2D:
                 plot.plot_pep2camelstacks(self, pep, plotfilelocation_2D, cruderange=False, plottitle=plottitle, plotfilename=plotfilename)
             if cruderange2D:
@@ -72,10 +72,10 @@ class input_results(object):
     def calc_rias_forallpeps(self):
         """
         Self -> None
-        calculate the RIA (q-ratio) for all peptides within self.input_results
+        calculate the RIA (q-ratio) for all peptides within self.selpex_results
         """
-        for aaseq in self.input_results:
-            self.input_results[aaseq].calc_rias()
+        for aaseq in self.selpex_results:
+            self.selpex_results[aaseq].calc_rias()
                 
     def get_coveragetemplate_allpeps(self, tp):
         """
@@ -83,14 +83,14 @@ class input_results(object):
         produce list with numbers (sticks found / sticks template) for all peptides of given TP.
         """
         coveragetemplate_allpeps_list = []
-        for aaseq in self.input_results:
-            coveragetemplate_allpeps_list.append(self.input_results[aaseq].get_coverage_template(tp))
+        for aaseq in self.selpex_results:
+            coveragetemplate_allpeps_list.append(self.selpex_results[aaseq].get_coverage_template(tp))
         return coveragetemplate_allpeps_list
         
     def get_coveragetheomips_allpeps(self, tp):
         coveragetheomips_allpeps_list = []
-        for aaseq in self.input_results:
-            coveragetheomips_allpeps_list.append(self.input_results[aaseq].get_coverage(tp))
+        for aaseq in self.selpex_results:
+            coveragetheomips_allpeps_list.append(self.selpex_results[aaseq].get_coverage(tp))
         return coveragetheomips_allpeps_list
 
     def get_riaincreasing_bool_list(self):
@@ -99,8 +99,8 @@ class input_results(object):
         produce list of booleans, True if RIA increases for all TPs for a peptide, False otherwise.
         """
         riaincreasing_bool_list = []
-        for aaseq in self.input_results:
-            pep = self.input_results[aaseq]
+        for aaseq in self.selpex_results:
+            pep = self.selpex_results[aaseq]
             riaincreasing_bool_list.append(pep.ria_increasing())
         return riaincreasing_bool_list
 
@@ -190,7 +190,7 @@ class input_results(object):
         x_axis_label = "Coverage [%]"
         y_axis_label_freq = "Frequency [#] of Peptides"
         y_axis_label_dens = "Density [%] of Peptides"
-        tp_fn_list = self.input_results[self.input_results.keys()[0]].get_anchor_results_keys_sorted()
+        tp_fn_list = self.selpex_results[self.selpex_results.keys()[0]].get_anchor_results_keys_sorted()
         for tp in tp_fn_list:
             plottitle = ("%s%s") % ("Coverage of template   ", tp)
             if not changename:
@@ -218,22 +218,22 @@ class Protein_results(object):
     def __init__(self):
         self.protein_results = {}    
     
-    def inputres2protres(self, input_results_object):
+    def selpexres2protres(self, selpex_results_object):
         """
-        from input_results_object.input_results create entries in protein_results_object.prot_results,
+        from selpex_results_object.selpex_results create entries in protein_results_object.prot_results,
         key = accession number, value = dictionary -->
         key = AAseq, value = a list, each element being a list 
         with TP[h] and the corresponding q value. in chronological order,
         from min to max labeled.
         """
-        for aaseq in input_results_object.input_results:
-            for an in input_results_object.input_results[aaseq].get_an():
+        for aaseq in selpex_results_object.selpex_results:
+            for an in selpex_results_object.selpex_results[aaseq].get_an():
                 if self.protein_results.has_key(an):
-                    self.protein_results[an][aaseq] = input_results_object.input_results[aaseq].get_tp_q_pairs()
+                    self.protein_results[an][aaseq] = selpex_results_object.selpex_results[aaseq].get_tp_q_pairs()
                 else:
-                    self.protein_results[an] = {aaseq: input_results_object.input_results[aaseq].get_tp_q_pairs()}
+                    self.protein_results[an] = {aaseq: selpex_results_object.selpex_results[aaseq].get_tp_q_pairs()}
                     
-    def plot_rias(self, input_results_object, plotfilelocation = None, plottitle=None):
+    def plot_rias(self, selpex_results_object, plotfilelocation = None, plottitle=None):
         """
         """
         if plotfilelocation:
@@ -241,13 +241,13 @@ class Protein_results(object):
         else:
             home = cameltoolkit.get_home_forR()
             plotfilelocation_rias = ("%s"+"%s") % (home, """/Downloads/plots/RIA/""")
-        self.prepare_plot_rias(input_results_object, plotfilelocation = plotfilelocation_rias, plottitle=plottitle)
+        self.prepare_plot_rias(selpex_results_object, plotfilelocation = plotfilelocation_rias, plottitle=plottitle)
         
-    def prepare_plot_rias(self, input_results_object, plotfilelocation=None, plottitle=None):
+    def prepare_plot_rias(self, selpex_results_object, plotfilelocation=None, plottitle=None):
         """
         """
         plot = py2r.Talkr()
-        sr = input_results_object
+        sr = selpex_results_object
         plot.set_r_plottemptxt(sr.get_r_plottemptxt())
         for an in self.protein_results:
             if plottitle:
@@ -289,7 +289,7 @@ class IterPeptide_results(object):
 class Peptide_results(object):
     def __init__(self, aaseq, charge, rt, pep):
         """
-        aaseq, charge and rt correspond to input input,
+        aaseq, charge and rt correspond to Selpex input,
         chonoslist short (not absolute paths)
         """
         self.aaseq = aaseq
@@ -434,7 +434,7 @@ class Peptide_results(object):
     
     def get_rt(self):
         """
-        This Retention Time originates from the input input,
+        This Retention Time originates from the Selpex input,
         NOT from the spectrum of the expmips and camelscore are from.
         """
         return float(self.rt)
