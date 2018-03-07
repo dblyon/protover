@@ -1,0 +1,20 @@
+##### LC/MS settings
+rt_range	5
+
+##### Mass Accuracy of the instrument. Enter integer or float. e.g. 10
+mass_accuracy_first	10
+mass_accuracy_rest	10
+
+##### Inpufile (tab delimited file format without a header)
+inputfilepath	Inputfile/Inputfile_14Peps.txt
+
+##### Outputdirectory (location of tab-delimited-text-RESULTS and pdf plots)
+outputdirectory	Outputdirectory/
+
+##### File/Experiment settings
+Filename	TimePoint	Experiment	Replicate
+LCMS_example_data_files/0_10C15NLa_8.mzML	0	A	1
+LCMS_example_data_files/24_11C15NLa_9.mzML	24	A	1
+LCMS_example_data_files/48_12C15NLa_6.mzML	48	A	1
+LCMS_example_data_files/72_13C15NLa_7.mzML	72	A	1
+LCMS_example_data_files/96_14C15NLa_16.mzML	96	A	1
