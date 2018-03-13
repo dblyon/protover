@@ -3,7 +3,7 @@ import subprocess, os
 class Talkr():
     """
     communicates with R via subprocess / piping
-    predefined plots can easily be "filled" with experimentally derived data
+    predefined plots can easily be "filled" with experimentally derived test_data
     """
     def __init__(self, arial=False):
         self.type = "h"
@@ -106,8 +106,8 @@ class Talkr():
         """
         self.setplotfilelocation(plotfilelocation)
         string2r = ("""
-dataraw <- data.frame(row.names = c("%s"),  num_true_abs=c(%s), num_false_abs=c(%s))
-dataperc <- data.frame(row.names = c("%s"), true=c(%s),  false=c(%s))
+dataraw <- test_data.frame(row.names = c("%s"),  num_true_abs=c(%s), num_false_abs=c(%s))
+dataperc <- test_data.frame(row.names = c("%s"), true=c(%s),  false=c(%s))
 pdf("%s%s%s", paper="a4r")
 x <- barplot(t(as.matrix(dataperc)), col=c("darkgreen", "darkred"), legend=TRUE, border=NA, xlim=c(0,8), args.legend=list(bty="n", border=NA, x=3), ylab="%s")
 text(x, dataperc$true-3, labels=round(dataraw$num_true_abs), col="black")

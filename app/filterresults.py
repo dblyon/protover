@@ -517,7 +517,7 @@ class Filter(object):
     def get_anslistfromdf(self, df):
         """
         DataFrame -> List(ANs)
-        produce list of AccessionNumbers of given data frame, without duplicates.
+        produce list of AccessionNumbers of given test_data frame, without duplicates.
         """
         ansstrings_list = list(df["ANs"].drop_duplicates())
         an_list = []
