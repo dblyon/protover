@@ -2,3 +2,8 @@
 Rplots.pdf
 *.txt.Rout
 *.pyc
+*.zip
+*.tag
+*.gzip
+*.pdf
+
